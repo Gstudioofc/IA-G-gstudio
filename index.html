@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>G • seu assistente</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #11111a;
+    --bubble-g: #151522;
+    --border: #1e1e2b;
+    --text: #e6e6f0;
+    --muted: #8b8fa3;
+    --cyan: #06b6d4;
+    --blue: #38bdf8;
+    --green: #22c55e;
+    --yellow: #eab308;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; }
+  .app { display: flex; flex-direction: column; height: 100dvh; max-width: 820px; margin: 0 auto; }
+  /* Topo */
+  header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: rgba(10,10,15,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .3px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); animation: pulse 2s infinite; }
+  .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+  @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+  /* Chat */
+  main { flex: 1; overflow-y: auto; padding: 18px 14px 8px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+  .msg { max-width: 86%; padding: 12px 14px; border-radius: 18px; line-height: 1.45; font-size: 15px; position: relative; word-wrap: break-word; animation: pop .18s ease-out; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+  @keyframes pop { from{transform:translateY(4px);opacity:0} to{transform:none;opacity:1} }
+  .user { align-self: flex-end; background: linear-gradient(135deg, #0891b2, var(--cyan)); color: white; border-bottom-right-radius: 6px; }
+  .g { align-self: flex-start; background: var(--bubble-g); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+  .g.conversa { border-left: 3px solid var(--blue); }
+  .g.criacao { border-left: 3px solid var(--green); }
+  .g.factual { border-left: 3px solid var(--yellow); }
+  .tag { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; opacity: .7; margin-bottom: 4px; }
+  .source { margin-top: 8px; font-size: 11px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .source a { color: var(--cyan); text-decoration: none; }
+  .corrigir { background: transparent; border: 1px solid #2a2a3a; color: var(--muted); font-size: 11px; padding: 4px 8px; border-radius: 10px; cursor: pointer; }
+  .corrigir:active { transform: scale(.97); }
+  /* Digitando */
+  .typing { display: flex; gap: 4px; padding: 10px 14px; width: fit-content; background: var(--bubble-g); border: 1px solid var(--border); border-radius: 16px; margin: 0 14px 6px; }
+  .typing span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2){ animation-delay: .15s } .typing span:nth-child(3){ animation-delay: .3s }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:.5} 40%{transform:translateY(-4px);opacity:1} }
+  /* Rodapé */
+  footer { padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg), transparent); }
+  .disclaimer { text-align: center; font-size: 11px; color: #6b7280; margin: 6px 0 10px; }
+  .input-bar { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 26px; box-shadow: 0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.02); }
+  .input-bar input { flex: 1; background: transparent; border: 0; outline: none; color: var(--text); font-size: 16px; padding: 10px 6px; }
+  .btn { width: 42px; height: 42px; border: 0; border-radius: 50%; background: #1a1a26; color: var(--cyan); display: grid; place-items: center; cursor: pointer; transition: .15s; flex-shrink: 0; }
+  .btn:active { transform: scale(.94); }
+  .btn.send { background: var(--cyan); color: #001016; }
+  .btn.active { background: var(--cyan); color: #001016; box-shadow: 0 0 16px rgba(6,182,212,.4); }
+  /* Câmera */
+  #cameraOverlay { position: fixed; inset: 0; background: rgba(5,5,10,.96); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  #cameraOverlay.show { display: flex; }
+  #video { width: 100%; max-width: 420px; aspect-ratio: 3/4; background: black; border-radius: 18px; object-fit: cover; border: 1px solid var(--border); }
+  .cam-controls { display: flex; gap: 12px; margin-top: 16px; }
+  .cam-btn { padding: 12px 18px; border-radius: 14px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-weight: 600; cursor: pointer; }
+  .cam-btn.primary { background: var(--cyan); color: #001016; border: 0; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 0; }
+  @media (min-width: 700px) { .msg { max-width: 70%; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="dot"></span> G • online</div>
+    <div class="time" id="clock">--:--</div>
+  </header>
+
+  <main id="chat"></main>
+
+  <div class="typing" id="typing" hidden>
+    <span></span><span></span>
+  </div>
+
+  <footer>
+    <div class="disclaimer">O G é uma IA e pode cometer erros. Confira sempre.</div>
+    <div class="input-bar">
+      <button class="btn" id="micBtn" title="Falar" aria-label="Microfone">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      </button>
+      <button class="btn" id="camBtn" title="Câmera" aria-label="Câmera">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3H9zm3 5a5 5 0 1 1 0 10 5 5 0 0 1 0-10z"/></svg>
+      </button>
+      <input id="input" placeholder="Pergunta, pede ideia, fala preço..." autocomplete="off" enterkeyhint="send">
+      <button class="btn send" id="sendBtn" title="Enviar" aria-label="Enviar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<!-- Overlay da câmera -->
+<div id="cameraOverlay">
+  <video id="video" autoplay playsinline muted></video>
+  <div class="cam-controls">
+    <button class="cam-btn" id="closeCam">Fechar</button>
+    <button class="cam-btn primary" id="captureBtn">capturar</button>
+  </div>
+</div>
+
+<script>
+  // ======== Elementos ========
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const micBtn = document.getElementById('micBtn');
+  const camBtn = document.getElementById('camBtn');
+  const typing = document.getElementById('typing');
+  const clock = document.getElementById('clock');
+  const overlay = document.getElementById('cameraOverlay');
+  const video = document.getElementById('video');
+  const captureBtn = document.getElementById('captureBtn');
+  const closeCam = document.getElementById('closeCam');
+
+  // ======== Relógio no topo ========
+  function updateClock(){
+    const now = new Date();
+    clock.textContent = now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  updateClock(); setInterval(updateClock, 1000*30);
+
+  // ======== Histórico em sessão ========
+  let history = [];
+  function saveHistory(){ sessionStorage.setItem('g_chat', JSON.stringify(history)); }
+  function loadHistory(){
+    try{ history = JSON.parse(sessionStorage.getItem('g_chat')||'[]'); }catch{ history=[]; }
+    history.forEach(m => addMsg(m.text, m.who, m.mode, m.source, true, m.query));
+  }
+
+  // ======== Base local (factual) ========
+  if(!localStorage.getItem('g_base')){
+    const base = [
+      {pergunta:"garantia", resposta:"Garantia padrão é de 12 meses contra defeito de fabricação, uai. É só guardar a nota.", fonte:"Base interna"},
+      {pergunta:"politica de troca", resposta:"Troca em até 7 dias corridos, produto sem uso e na caixa.", fonte:"Política Comercial"},
+      {pergunta:"politica", resposta:"Política de troca: 7 dias. Política de privacidade: não vendemos seus dados.", fonte:"Base interna"},
+      {pergunta:"dolar", resposta:"O dólar comercial varia o dia todo. Confere no Banco Central pra cotação oficial, sô.", fonte:"Base interna"}
+    ];
+    localStorage.setItem('g_base', JSON.stringify(base));
+  }
+  if(!localStorage.getItem('g_erros')) localStorage.setItem('g_erros', '[]');
+
+  // ======== Fala (TTS) ========
+  function falar(texto){
+    try{
+      const clean = texto.replace(/https?:\/\/\S+/g,'').slice(0,280);
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = 'pt-BR'; u.rate = 1.05; u.pitch = 1;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    }catch{}
+  }
+
+  // ======== Mensagens ========
+  function addMsg(text, who='g', mode='conversa', source=null, isReload=false, query=null){
+    const div = document.createElement('div');
+    div.className = `msg ${who}${who==='g'?' '+mode:''}`;
+    if(who==='g'){
+      const tag = mode==='criacao'?'CRIAÇÃO':mode==='factual'?'FACTUAL':'CONVERSA';
+      div.innerHTML = `<div class="tag">${tag}</div>${text}`;
+    }else{
+      div.textContent = text;
+    }
+    if(source){
+      const src = document.createElement('div');
+      src.className = 'source';
+      src.innerHTML = `Fonte: <b>${source}</b>`;
+      if(mode==='factual' && who==='g'){
+        const btn = document.createElement('button');
+        btn.className = 'corrigir';
+        btn.textContent = '🐛 Corrigir';
+        btn.onclick = () => {
+          const erros = JSON.parse(localStorage.getItem('g_erros')||'[]');
+          erros.push({pergunta: query||text, quando: Date.now()});
+          localStorage.setItem('g_erros', JSON.stringify(erros));
+          btn.textContent = '✓ Anotei, uai!';
+          btn.disabled = true;
+        };
+        src.appendChild(btn);
+      }
+      div.appendChild(src);
+    }
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    if(!isReload){
+      history.push({text, who, mode, source, query});
+      saveHistory();
+      if(who==='g') falar(div.innerText.replace('CONVERSA','').replace('CRIAÇÃO','').replace('FACTUAL','').trim());
+    }
+  }
+
+  function showTyping(show){ typing.hidden = !show; if(show) chat.scrollTop = chat.scrollHeight; }
+
+  // ======== Reconhecimento de voz ========
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec, listening=false;
+  if(SR){
+    rec = new SR(); rec.lang='pt-BR'; rec.interimResults=false; rec.maxAlternatives=1;
+    rec.onstart = ()=>{ listening=true; micBtn.classList.add('active'); };
+    rec.onend = ()=>{ listening=false; micBtn.classList.remove('active'); };
+    rec.onresult = e => { input.value = e.results[0][0].transcript; send(); };
+    rec.onerror = ()=>{ listening=false; micBtn.classList.remove('active'); };
+    micBtn.onclick = ()=> listening ? rec.stop() : rec.start();
+  }else{
+    micBtn.onclick = ()=> alert('Reconhecimento de voz não suportado neste navegador, uai.');
+  }
+
+  // ======== Câmera ========
+  let stream;
+  camBtn.onclick = async ()=>{
+    try{
+      overlay.classList.add('show');
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+      video.srcObject = stream;
+    }catch{ alert('Não consegui abrir a câmera, sô.'); overlay.classList.remove('show'); }
+  };
+  closeCam.onclick = ()=>{ overlay.classList.remove('show'); if(stream) stream.getTracks().forEach(t=>t.stop()); };
+  captureBtn.onclick = ()=>{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    overlay.classList.remove('show');
+    addMsg('📷 foto enviada', 'user');
+    showTyping(true);
+    setTimeout(()=>{
+      showTyping(false);
+      addMsg('Produto detectado (demo). Parece um trem bão! Quer que eu crie uma legenda pra vender, uai?', 'g', 'criacao');
+    }, 800);
+  };
+
+  // ======== Router principal ========
+  const piadas = [
+    "Por que o mineiro leva barbante no bolso? Pra amarrar a prosa, uai!",
+    "O que o pão de queijo falou pro café? 'Sem você eu desanimo, sô!'",
+    "Mineiro não se perde, ele só faz turismo demorado, uai."
+  ];
+  function rand(a){ return a[Math.floor(Math.random()*a.length)] }
+
+  async function responder(q){
+    const l = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    // CONVERSA
+    if(/hora|horas|que horas/.test(l)){
+      const h = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      return {text:`Agora são ${h}, uai.`, mode:'conversa'};
+    }
+    if(/^(oi|ola|opa|e ai|fala|boa|boa tarde|bom dia)/.test(l)){
+      return {text:`Fala, sô! Eu sou o G. Tudo bão por aí? Pode perguntar hora, pedir ideia ou consultar preço, uai.`, mode:'conversa'};
+    }
+    if(/piada/.test(l)){
+      return {text: rand(piadas), mode:'conversa'};
+    }
+    // CRIAÇÃO
+    if(/(cria|gera|legenda|ideia|texto|escreve|roteiro)/.test(l)){
+      const ideias = [
+        `Aqui vai uma ideia: pega "${q}" e vira um carrossel de 3 slides: problema → solução mineira → chamada pra ação.`,
+        `Aqui vai uma ideia: legenda curtinha — "${q}? Aqui no interior a gente resolve com café e prosa. Bora?"`,
+        `Aqui vai uma ideia: vídeo de 15s começando com "Ô trem bão" e mostrando ${q} na prática, uai.`
+      ];
+      return {text: rand(ideias), mode:'criacao'};
+    }
+    // FACTUAL
+    if(/(quanto|preco|preço|custa|garantia|politica|política|dolar|dólar|presidente|hoje|quem e|quando|onde)/.test(l)){
+      showTyping(true);
+      // 1) busca local
+      const base = JSON.parse(localStorage.getItem('g_base')||'[]');
+      const achado = base.find(b => l.includes(b.pergunta) || b.pergunta.includes(l));
+      if(achado){
+        await new Promise(r=>setTimeout(r, 400));
+        showTyping(false);
+        return {text: achado.resposta, mode:'factual', source: achado.fonte, query:q};
+      }
+      // 2) DuckDuckGo
+      try{
+        const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`;
+        const res = await fetch(url);
+        const data = await res.json();
+        let txt = data.AbstractText || (data.RelatedTopics?.[0]?.Text) || '';
+        if(!txt) txt = 'Não achei um resumo certeiro agora, uai. Tenta ser mais específico?';
+        showTyping(false);
+        return {text: txt, mode:'factual', source:'DuckDuckGo', query:q};
+      }catch(e){
+        showTyping(false);
+        return {text:'Deu ruim na busca agora, sô. Tô offline pra web. Tenta de novo daqui a pouco?', mode:'factual', source:'offline', query:q};
+      }
+    }
+    // fallback conversa
+    return {text:`Entendi, uai. Quer que eu tente como ideia criativa ou buscar fonte? Me fala "cria" ou "quanto custa".`, mode:'conversa'};
+  }
+
+  // ======== Envio ========
+  async function send(){
+    const q = input.value.trim();
+    if(!q) return;
+    addMsg(q, 'user');
+    input.value = '';
+    showTyping(true);
+    const resp = await responder(q);
+    setTimeout(()=>{
+      showTyping(false);
+      addMsg(resp.text, 'g', resp.mode, resp.source||null, false, resp.query||q);
+    }, resp.mode==='factual'?0:500);
+  }
+  sendBtn.onclick = send;
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+
+  // ======== Inicialização ========
+  loadHistory();
+  if(history.length===0){
+    setTimeout(()=> addMsg('Fala! Eu sou o G, seu assistente. Pode perguntar hora, pedir ideia ou consultar preço.', 'g', 'conversa'), 300);
+  }
+</script>
+</body>
+</html>
